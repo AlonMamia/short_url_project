@@ -1,0 +1,31 @@
+version: '3.9'
+
+services:
+  web:
+    env_file:
+      - .env
+    build: .
+    command: bash -c "python manage.py makemigrations && python manage.py migrate && gunicorn short_urls_learn.wsgi -b 0.0.0.0:8000"
+    volumes:
+      - .:/app
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+  db:
+    image: postgres:13
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
+    environment:
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_USER=short_url_learn
+      - POSTGRES_DB=short_url_learn
+    ports:
+    - "5432:5432"
+
+
+#    environment:
+##      DATABASE_URL: postgres://short_url_learn:password@db:5438/short_url_learn
+
+volumes:
+  postgres_data:
