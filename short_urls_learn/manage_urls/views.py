@@ -1,5 +1,5 @@
 from django.shortcuts import render, redirect
-from django.http import HttpResponse
+from django.http import HttpResponseNotFound
 from .forms import EnterUrlForm
 from .models import Url
 import uuid
@@ -10,7 +10,7 @@ def home(request):
     if request.method == 'POST':
         form = EnterUrlForm(request.POST)
         if form.is_valid():
-            url = form.cleaned_data['original_url']
+            # url = form.cleaned_data['original_url']
             tiny_url = uuid.uuid4().hex[:8]
             form.instance.tiny_url = tiny_url
             form.save()
@@ -28,11 +28,6 @@ def use_short_link(request, slug):
         link.click_counter += 1
         link.save()
         return redirect(link.original_url)
-
     except:
-        return render(request, 'manage_urls/homepage.html', {'slug': slug})
-
-
-def hi(request):
-    return render(request, 'manage_urls/hi.html')
-# Create your views here.
+        # return render(request, 'manage_urls/homepage.html', {'slug': slug})
+        return HttpResponseNotFound("The object does not exist")

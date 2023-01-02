@@ -1,59 +1,75 @@
-from unittest import mock
-import requests
+import os
+import django
 from django.test import TestCase, Client
-from .models import Url
 from django.core.exceptions import ValidationError
+
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'short_urls_learn_main.settings')
+django.setup()
+
+from manage_urls.models import Url
+from manage_urls.views import use_short_link
 
 
 # Create your tests here.
 class UrlTests(TestCase):
-
     # test create link
-    def test_create_link(self):
+    def test_valid_url(self):
         # creating an object in django testing db
-        new_link = Url.objects.create(original_url='https://music.youtube.com/',
+        new_link = Url.objects.create(original_url='https://validurl.com',
                                       tiny_url='4564dasfsa8')
-        try:
+        new_link.full_clean()
+        new_link.save()
+
+    #
+    def test_invalid_url(self):
+        # creating an object in django testing db
+        # the _ in the url make it invalid.
+        new_link = Url.objects.create(original_url='https://invalid_url.com',
+                                      tiny_url='4564dasfsa8')
+        with self.assertRaises(ValidationError):
             new_link.full_clean()
-        except ValidationError as e:
-            self.assertEqual(e.error_dict, {'original_url': ["ValidationError message"]})
+
+    def test_form_submission(self):
+        # Create a valid form data dictionary
+        original_url = 'https://www.example.com'
+        form_data = {'original_url': original_url}
+
+        # Send a POST request with the form data
+        client = Client(HTTP_HOST='localhost')
+        response = client.post('/', form_data)
+
+        # Check that the response status code is 200 (OK)
+        self.assertEqual(response.status_code, 200)
+
+        # Check that an object was created in the database
+        self.assertEqual(Url.objects.count(), 1)
+        self.assertEqual(Url.objects.filter(original_url=original_url).count(), 1)
 
     def test_redirect(self):
-        # Create a new URL object
-        new_url = Url.objects.create(original_url='https://music.youtube.com/',
-                                     tiny_url='4564dasfsa8')
-
-        try:
-            with mock.patch('requests.get') as mock_get:
-                # mock_get.return_value.status_code = 200
-                c = Client()
-                response = c.get('/link/4564dasfsa85/')
-                # Assert that the response is a redirect to the original URL, without following the redirect and
-                # retrieving the final response
-                # fetch_redirect_response controls whether the test client
-                # should follow redirects and retrieve the final response, or just return the redirect response.
-                self.assertRedirects(response, 'https://music.youtube.com/', fetch_redirect_response=False)
-        except Exception as e:
-            # Print the exception if it is raised
-            print(e)
-
-    def test_url_exist(self):
         # Create an object in the database with an original URL that does not exist
-        new_url = Url.objects.create(original_url='https://www.google.co.il/webhp?hl=iw&tab=iw', tiny_url='4564dasfsa8')
+        new_url = r'https://NewUrl.com'
+        tiny_url = '4564dasfsa8'
+        Url.objects.create(original_url=new_url, tiny_url=tiny_url)
+        # Send an HTTP GET request to the original URL of the new_url object
+        client = Client(HTTP_HOST='localhost')
+        response = client.get(f'/link/{tiny_url}/')
+        self.assertRedirects(response, new_url, fetch_redirect_response=False, target_status_code=302)
 
-        # Use the mock.patch decorator to mock the requests.get function and return a mock response object
-        # with the status_code attribute set to 404
-        with mock.patch('requests.get') as mock_get:
-            mock_get.return_value.status_code = 404
+    def test_invalid_redirect(self):
+        # Create an object in the database with an original URL that does not exist
+        non_exists_url = r'https://NewUrl.com'
+        tiny_url = '4564dasfsa8'
+        # Send an HTTP GET request to the original URL of the new_url object
+        client = Client(HTTP_HOST='localhost')
+        response = client.get(f'/link/{tiny_url}/')
+        self.assertEqual(response.status_code, 404)
 
-            # Send an HTTP GET request to the original URL of the new_url object
-            c = Client()
-            try:
-                response = c.get(new_url.original_url)
-            except Exception as e:
-                # If an exception is raised, print the exception and fail the test
-                print(e)
-                self.fail("An exception was raised")
-
-            # Assert that the response status code is 404
-            self.assertEqual(response.status_code, 404)
+    def test_counter(self):
+        # Create an object in the database with an original URL that does not exist
+        new_url = r'https://NewUrl.com'
+        tiny_url = '4564dasfsa8'
+        Url.objects.create(original_url=new_url, tiny_url=tiny_url)
+        # Send an HTTP GET request to the original URL of the new_url object
+        client = Client(HTTP_HOST='localhost')
+        response = client.get(f'/link/{tiny_url}/')
+        self.assertEqual(Url.objects.get(original_url=new_url).click_counter, 1)

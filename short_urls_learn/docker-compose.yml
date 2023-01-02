@@ -5,7 +5,7 @@ services:
     env_file:
       - .env
     build: .
-    command: bash -c "python manage.py makemigrations && python manage.py migrate && gunicorn short_urls_learn.wsgi -b 0.0.0.0:8000"
+    command: bash -c "python manage.py makemigrations && python manage.py migrate && gunicorn short_urls_learn_main.wsgi -b 0.0.0.0:8000"
     volumes:
       - .:/app
     ports:
