@@ -17,22 +17,20 @@ class CreateUrlTest(APITestCase):
         """
         Ensure we can create a new url object with a valid original_url.
         """
-        url_count = Url.objects.count()
         data = {'original_url': self.valid_url}
         response = self.costume_client.post(reverse('url-create'), data, format='json')
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(Url.objects.count(), url_count + 1)
+        self.assertEqual(Url.objects.count(), 1)
         self.assertEqual(Url.objects.last().original_url, self.valid_url)
 
     def test_create_invalid_url(self):
         """
         Ensure we get a 400 Bad Request response when trying to create a new url object with an invalid original_url.
         """
-        url_count = Url.objects.count()
         data = {'original_url': self.invalid_url}
         response = self.costume_client.post(reverse('url-create'), data, format='json')
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(Url.objects.count(), url_count)
+        self.assertEqual(Url.objects.count(), 0)
 
 
 class RedirectUrlTest(APITestCase):
