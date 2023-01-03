@@ -32,6 +32,7 @@ ALLOWED_HOSTS = ['127.0.0.1', 'localhost']
 # Application definition
 
 INSTALLED_APPS = [
+    'rest_framework',
     'bootstrap5',
     'manage_urls',
     'django.contrib.admin',
