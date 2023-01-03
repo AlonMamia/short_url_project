@@ -1,75 +1,56 @@
-import os
-import django
-from django.test import TestCase, Client
-from django.core.exceptions import ValidationError
-
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'short_urls_learn_main.settings')
-django.setup()
+from django.urls import reverse
+from django.test import Client
+from rest_framework import status
+from rest_framework.test import APITestCase
 
 from manage_urls.models import Url
-from manage_urls.views import use_short_link
+from manage_urls.serializers import UrlSerializer
 
 
-# Create your tests here.
-class UrlTests(TestCase):
-    # test create link
-    def test_valid_url(self):
-        # creating an object in django testing db
-        new_link = Url.objects.create(original_url='https://validurl.com',
-                                      tiny_url='4564dasfsa8')
-        new_link.full_clean()
-        new_link.save()
+class CreateUrlTest(APITestCase):
+    def setUp(self):
+        self.valid_url = 'https://www.google.com'
+        self.invalid_url = 'invalid'
+        self.costume_client = Client(HTTP_HOST='localhost')
 
-    #
-    def test_invalid_url(self):
-        # creating an object in django testing db
-        # the _ in the url make it invalid.
-        new_link = Url.objects.create(original_url='https://invalid_url.com',
-                                      tiny_url='4564dasfsa8')
-        with self.assertRaises(ValidationError):
-            new_link.full_clean()
+    def test_create_valid_url(self):
+        """
+        Ensure we can create a new url object with a valid original_url.
+        """
+        url_count = Url.objects.count()
+        data = {'original_url': self.valid_url}
+        response = self.costume_client.post(reverse('url-create'), data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(Url.objects.count(), url_count + 1)
+        self.assertEqual(Url.objects.last().original_url, self.valid_url)
 
-    def test_form_submission(self):
-        # Create a valid form data dictionary
-        original_url = 'https://www.example.com'
-        form_data = {'original_url': original_url}
+    def test_create_invalid_url(self):
+        """
+        Ensure we get a 400 Bad Request response when trying to create a new url object with an invalid original_url.
+        """
+        url_count = Url.objects.count()
+        data = {'original_url': self.invalid_url}
+        response = self.costume_client.post(reverse('url-create'), data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(Url.objects.count(), url_count)
 
-        # Send a POST request with the form data
-        client = Client(HTTP_HOST='localhost')
-        response = client.post('/', form_data)
 
-        # Check that the response status code is 200 (OK)
-        self.assertEqual(response.status_code, 200)
+class RedirectUrlTest(APITestCase):
+    def setUp(self):
+        self.url = Url.objects.create(original_url='https://www.google.com', tiny_url='55ae07f8')
+        self.serializer = UrlSerializer(instance=self.url)
+        self.costume_client = Client(HTTP_HOST='localhost')
 
-        # Check that an object was created in the database
-        self.assertEqual(Url.objects.count(), 1)
-        self.assertEqual(Url.objects.filter(original_url=original_url).count(), 1)
+    def test_redirect_url(self):
+        # Make a GET request to the view with the slug of the Url object
+        response = self.costume_client.get(f'/shorturls/{self.url.tiny_url}')
+        # Assert that the response status code is a redirect (status code 302)
+        self.assertEqual(response.status_code, status.HTTP_302_FOUND)
+        # Assert that the response contains the correct Location header
+        self.assertEqual(response['Location'], self.url.original_url)
 
-    def test_redirect(self):
-        # Create an object in the database with an original URL that does not exist
-        new_url = r'https://NewUrl.com'
-        tiny_url = '4564dasfsa8'
-        Url.objects.create(original_url=new_url, tiny_url=tiny_url)
-        # Send an HTTP GET request to the original URL of the new_url object
-        client = Client(HTTP_HOST='localhost')
-        response = client.get(f'/link/{tiny_url}/')
-        self.assertRedirects(response, new_url, fetch_redirect_response=False, target_status_code=302)
-
-    def test_invalid_redirect(self):
-        # Create an object in the database with an original URL that does not exist
-        non_exists_url = r'https://NewUrl.com'
-        tiny_url = '4564dasfsa8'
-        # Send an HTTP GET request to the original URL of the new_url object
-        client = Client(HTTP_HOST='localhost')
-        response = client.get(f'/link/{tiny_url}/')
-        self.assertEqual(response.status_code, 404)
-
-    def test_counter(self):
-        # Create an object in the database with an original URL that does not exist
-        new_url = r'https://NewUrl.com'
-        tiny_url = '4564dasfsa8'
-        Url.objects.create(original_url=new_url, tiny_url=tiny_url)
-        # Send an HTTP GET request to the original URL of the new_url object
-        client = Client(HTTP_HOST='localhost')
-        response = client.get(f'/link/{tiny_url}/')
-        self.assertEqual(Url.objects.get(original_url=new_url).click_counter, 1)
+    def test_redirect_url_not_exist(self):
+        # Make a GET request to the view with a slug that doesn't match any Url objects
+        response = self.costume_client.get(f'/shorturls/some-invalid-slug')
+        # Assert that the response status code is a 404 Not Found
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
