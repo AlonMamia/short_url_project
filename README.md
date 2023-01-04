@@ -1,3 +1,5 @@
+# **Shortener Url Project**
+
 **Project Purpose**
 The purpose of this project is to create a shortened version of a given original link by making a POST request. This project was implemented using Django REST framework and a PostgresSQL database.
 
@@ -11,7 +13,7 @@ The purpose of this project is to create a shortened version of a given original
      Then, use the commands python manage.py makemigrations and python manage.py migrate in the terminal to migrate the new database according to the application. 
      Finally, use the command python manage.py runserver to run the local server.
    
-   **Creating a New Tiny URL**
+**Creating a New Tiny URL**
 
    To create a new tiny URL, make a POST request to shorturls/create with the following JSON:
    {
