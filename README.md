@@ -5,7 +5,7 @@ The purpose of this project is to create a shortened version of a given original
 
 **Running the Program Locally**
 
-1. install requirements.txt by the command 'pip install -r requirements.txt' in terminal from short_urls_learn folder
+1. install requirements.txt by the command 'pip install -r requirements.txt' in terminal from short_urls_learn folder.
 2. Copy the .env and docker.env files from the email provided to short_urls_learn_main folder.
 3. Paste these files into the short_urls_learn directory.
 4. To run the application and the database in Docker containers, use the command docker-compose up in the terminal and that's use docker.env.
